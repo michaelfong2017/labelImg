@@ -4,6 +4,7 @@ import argparse
 import codecs
 import os.path
 import platform
+import json
 import shutil
 import sys
 import webbrowser as wb
@@ -96,6 +97,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.m_img_list = []
         self.dir_name = None
         self.label_hist = []
+        self.class_criteria = {}
         self.last_open_dir = None
         self.cur_img_idx = 0
         self.img_count = len(self.m_img_list)
@@ -116,7 +118,7 @@ class MainWindow(QMainWindow, WindowMixin):
             print("Not find:/data/predefined_classes.txt (optional)")
 
         # Main widgets and related state.
-        self.label_dialog = LabelDialog(parent=self, list_item=self.label_hist)
+        self.label_dialog = LabelDialog(parent=self, class_criteria=self.class_criteria)
 
         self.items_to_shapes = {}
         self.shapes_to_items = {}
@@ -963,7 +965,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if not self.use_default_label_checkbox.isChecked():
             if len(self.label_hist) > 0:
                 self.label_dialog = LabelDialog(
-                    parent=self, list_item=self.label_hist)
+                    parent=self, class_criteria=self.class_criteria)
 
             # Sync single class mode from PR#106
             if self.single_class_mode.isChecked() and self.lastLabel:
@@ -1607,14 +1609,17 @@ class MainWindow(QMainWindow, WindowMixin):
         self.set_dirty()
 
     def load_predefined_classes(self, predef_classes_file):
-        if os.path.exists(predef_classes_file) is True:
-            with codecs.open(predef_classes_file, 'r', 'utf8') as f:
+        if os.path.exists(predef_classes_file):
+            with codecs.open(predef_classes_file, 'r', 'utf-8') as f:
                 for line in f:
-                    line = line.strip()
-                    if self.label_hist is None:
-                        self.label_hist = [line]
-                    else:
-                        self.label_hist.append(line)
+                    try:
+                        class_data = json.loads(line.strip())
+                        if isinstance(class_data, dict) and 'name' in class_data:
+                            class_name = class_data['name']
+                            self.label_hist.append(class_name)
+                            self.class_criteria[class_name] = class_data
+                    except json.JSONDecodeError as e:
+                        print(f"Error parsing line: {line}. Error: {e}")
 
     def load_pascal_xml_by_filename(self, xml_path):
         if self.file_path is None:

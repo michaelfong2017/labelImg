@@ -7,13 +7,13 @@ except ImportError:
     from PyQt4.QtCore import *
 
 from libs.utils import new_icon, label_validator, trimmed
+from libs.editClassesDialog import EditClassesDialog  # Import the new dialog
 
 BB = QDialogButtonBox
 
-
 class LabelDialog(QDialog):
 
-    def __init__(self, text="Enter object label", parent=None, list_item=None):
+    def __init__(self, text="Enter object label", parent=None, class_criteria=None):
         super(LabelDialog, self).__init__(parent)
 
         self.edit = QLineEdit()
@@ -22,7 +22,7 @@ class LabelDialog(QDialog):
         self.edit.editingFinished.connect(self.post_process)
 
         model = QStringListModel()
-        model.setStringList(list_item)
+        model.setStringList(list(class_criteria.keys()))
         completer = QCompleter()
         completer.setModel(model)
         self.edit.setCompleter(completer)
@@ -33,19 +33,26 @@ class LabelDialog(QDialog):
         bb.accepted.connect(self.validate)
         bb.rejected.connect(self.reject)
 
-        layout = QVBoxLayout()
-        layout.addWidget(bb, alignment=Qt.AlignmentFlag.AlignLeft)
-        layout.addWidget(self.edit)
+        self.edit_classes_button = QPushButton("Edit classes")
+        self.edit_classes_button.clicked.connect(self.edit_classes)
 
-        if list_item is not None and len(list_item) > 0:
-            self.list_widget = QListWidget(self)
-            for item in list_item:
+        layout = QVBoxLayout()
+        layout.addWidget(self.edit_classes_button, alignment=Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self.edit)
+        layout.addWidget(bb, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        self.list_widget = QListWidget(self)
+        if class_criteria is not None and len(class_criteria) > 0:
+            for item in class_criteria.keys():
                 self.list_widget.addItem(item)
             self.list_widget.itemClicked.connect(self.list_item_click)
             self.list_widget.itemDoubleClicked.connect(self.list_item_double_click)
             layout.addWidget(self.list_widget)
 
         self.setLayout(layout)
+        
+        # Initialize classes from class_criteria
+        self.classes = class_criteria
 
     def validate(self):
         if trimmed(self.edit.text()):
@@ -93,3 +100,25 @@ class LabelDialog(QDialog):
     def list_item_double_click(self, t_qlist_widget_item):
         self.list_item_click(t_qlist_widget_item)
         self.validate()
+
+    def edit_classes(self):
+        dialog = EditClassesDialog(classes=self.classes, parent=self)
+        if dialog.exec_():
+            new_classes = dialog.classes
+            self.classes.update(new_classes)
+            self.update_class_list()
+            self.debug_classes()  # Add this line to print all classes and their criteria
+
+    def update_class_list(self):
+        self.list_widget.clear()
+        self.list_widget.addItems(self.classes.keys())
+
+    def debug_classes(self):
+        print("Classes and their criteria:")
+        for class_name, criteria in self.classes.items():
+            print(f"Class: {class_name}")
+            print(f"  Composition: {criteria['composition']}")
+            print(f"  Echogenicity: {criteria['echogenicity']}")
+            print(f"  Shape: {criteria['shape']}")
+            print(f"  Margin: {criteria['margin']}")
+            print(f"  Echogenic Foci: {criteria['echogenic_foci']}")

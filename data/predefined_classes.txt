@@ -1,15 +1,15 @@
-dog
-person
-cat
-tv
-car
-meatballs
-marinara sauce
-tomato soup
-chicken noodle soup
-french onion soup
-chicken breast
-ribs
-pulled pork
-hamburger
-cavity
+{"name": "dog", "composition": "Solid", "echogenicity": "Hyperechoic", "shape": "Wider-than-tall", "margin": "Smooth", "echogenic_foci": ["None"]}
+{"name": "person", "composition": "Solid", "echogenicity": "Isoechoic", "shape": "Taller-than-wide", "margin": "Lobulated", "echogenic_foci": ["Macrocalcifications", "Punctate echogenic foci"]}
+{"name": "cat", "composition": "Solid", "echogenicity": "Hypoechoic", "shape": "Wider-than-tall", "margin": "Ill-defined", "echogenic_foci": ["Punctate echogenic foci", "Macrocalcifications"]}
+{"name": "tv", "composition": "Cystic", "echogenicity": "Anechoic", "shape": "Wider-than-tall", "margin": "Smooth", "echogenic_foci": ["None"]}
+{"name": "car", "composition": "Solid", "echogenicity": "Isoechoic", "shape": "Taller-than-wide", "margin": "Smooth", "echogenic_foci": ["Peripheral (rim) calcifications"]}
+{"name": "meatballs", "composition": "Mixed cystic and solid", "echogenicity": "Hyperechoic", "shape": "Wider-than-tall", "margin": "Lobulated", "echogenic_foci": ["Macrocalcifications"]}
+{"name": "marinara sauce", "composition": "Cystic", "echogenicity": "Anechoic", "shape": "Wider-than-tall", "margin": "Ill-defined", "echogenic_foci": ["None"]}
+{"name": "tomato soup", "composition": "Cystic", "echogenicity": "Anechoic", "shape": "Wider-than-tall", "margin": "Smooth", "echogenic_foci": ["None"]}
+{"name": "chicken noodle soup", "composition": "Mixed cystic and solid", "echogenicity": "Hyperechoic", "shape": "Wider-than-tall", "margin": "Lobulated", "echogenic_foci": ["None"]}
+{"name": "french onion soup", "composition": "Cystic", "echogenicity": "Anechoic", "shape": "Wider-than-tall", "margin": "Ill-defined", "echogenic_foci": ["None"]}
+{"name": "chicken breast", "composition": "Solid", "echogenicity": "Isoechoic", "shape": "Wider-than-tall", "margin": "Smooth", "echogenic_foci": ["None"]}
+{"name": "ribs", "composition": "Solid", "echogenicity": "Hyperechoic", "shape": "Wider-than-tall", "margin": "Lobulated", "echogenic_foci": ["Macrocalcifications"]}
+{"name": "pulled pork", "composition": "Mixed cystic and solid", "echogenicity": "Hyperechoic", "shape": "Wider-than-tall", "margin": "Ill-defined", "echogenic_foci": ["None"]}
+{"name": "hamburger", "composition": "Solid", "echogenicity": "Hypoechoic", "shape": "Wider-than-tall", "margin": "Smooth", "echogenic_foci": ["None"]}
+{"name": "cavity", "composition": "Cystic", "echogenicity": "Anechoic", "shape": "Taller-than-wide", "margin": "Ill-defined", "echogenic_foci": ["Punctate echogenic foci", "Macrocalcifications"]}

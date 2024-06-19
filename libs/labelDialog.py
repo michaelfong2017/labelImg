@@ -7,7 +7,7 @@ except ImportError:
     from PyQt4.QtCore import *
 
 from libs.utils import new_icon, label_validator, trimmed
-from libs.editClassesDialog import EditClassesDialog  # Import the new dialog
+from libs.createNewDialog import CreateNewDialog  # Import the new dialog
 
 BB = QDialogButtonBox
 
@@ -21,8 +21,9 @@ class LabelDialog(QDialog):
         self.edit.setValidator(label_validator())
         self.edit.editingFinished.connect(self.post_process)
 
+        self.classes = class_criteria or {}
         model = QStringListModel()
-        model.setStringList(list(class_criteria.keys()))
+        model.setStringList(list(self.classes.keys()))
         completer = QCompleter()
         completer.setModel(model)
         self.edit.setCompleter(completer)
@@ -33,30 +34,30 @@ class LabelDialog(QDialog):
         bb.accepted.connect(self.validate)
         bb.rejected.connect(self.reject)
 
-        self.edit_classes_button = QPushButton("Edit classes")
+        self.edit_classes_button = QPushButton("Create New Class")
         self.edit_classes_button.clicked.connect(self.edit_classes)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.edit_classes_button, alignment=Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self.edit_classes_button, alignment=Qt.AlignLeft)
         layout.addWidget(self.edit)
-        layout.addWidget(bb, alignment=Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(bb, alignment=Qt.AlignLeft)
 
         self.list_widget = QListWidget(self)
-        if class_criteria is not None and len(class_criteria) > 0:
-            for item in class_criteria.keys():
+        if self.classes:
+            for item in self.classes.keys():
                 self.list_widget.addItem(item)
             self.list_widget.itemClicked.connect(self.list_item_click)
             self.list_widget.itemDoubleClicked.connect(self.list_item_double_click)
             layout.addWidget(self.list_widget)
 
         self.setLayout(layout)
-        
-        # Initialize classes from class_criteria
-        self.classes = class_criteria
 
     def validate(self):
-        if trimmed(self.edit.text()):
+        text = trimmed(self.edit.text())
+        if text in self.classes:
             self.accept()
+        else:
+            QMessageBox.warning(self, "Validation Error", "The entered label must be one of the defined classes.")
 
     def post_process(self):
         self.edit.setText(trimmed(self.edit.text()))
@@ -102,16 +103,24 @@ class LabelDialog(QDialog):
         self.validate()
 
     def edit_classes(self):
-        dialog = EditClassesDialog(classes=self.classes, parent=self)
+        dialog = CreateNewDialog(classes=self.classes, parent=self)
         if dialog.exec_():
             new_classes = dialog.classes
             self.classes.update(new_classes)
             self.update_class_list()
-            self.debug_classes()  # Add this line to print all classes and their criteria
+            self.update_completer()
+            self.debug_classes()
 
     def update_class_list(self):
         self.list_widget.clear()
         self.list_widget.addItems(self.classes.keys())
+
+    def update_completer(self):
+        model = QStringListModel()
+        model.setStringList(list(self.classes.keys()))
+        completer = QCompleter()
+        completer.setModel(model)
+        self.edit.setCompleter(completer)
 
     def debug_classes(self):
         print("Classes and their criteria:")

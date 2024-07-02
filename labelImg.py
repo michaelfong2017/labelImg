@@ -110,7 +110,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.screencast = "https://youtu.be/p0nR2YsCY_U"
 
         # Load predefined classes to the list
-        self.load_predefined_classes(default_prefdef_class_file)
+        self.load_classes(default_prefdef_class_file)
 
         if self.label_hist:
             self.default_label = self.label_hist[0]
@@ -826,6 +826,7 @@ class MainWindow(QMainWindow, WindowMixin):
         for action in self.actions.onShapesPresent:
             action.setEnabled(True)
         self.update_combo_box()
+        self.save_updated_classes()  # Save updated class list whenever a new label is added
 
     def remove_label(self, shape):
         if shape is None:
@@ -992,6 +993,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
             if text not in self.label_hist:
                 self.label_hist.append(text)
+                self.save_updated_classes()  # Save new class list to updated_classes.txt
         else:
             # self.canvas.undoLastLine()
             self.canvas.reset_all_lines()
@@ -1608,9 +1610,15 @@ class MainWindow(QMainWindow, WindowMixin):
         self.canvas.end_move(copy=False)
         self.set_dirty()
 
-    def load_predefined_classes(self, predef_classes_file):
-        if os.path.exists(predef_classes_file):
-            with codecs.open(predef_classes_file, 'r', 'utf-8') as f:
+    def load_classes(self, default_prefdef_class_file):
+        updated_classes_file = os.path.join(os.path.dirname(default_prefdef_class_file), 'updated_classes.txt')
+        if os.path.exists(updated_classes_file):
+            class_file = updated_classes_file
+        else:
+            class_file = default_prefdef_class_file
+
+        if os.path.exists(class_file):
+            with codecs.open(class_file, 'r', 'utf-8') as f:
                 for line in f:
                     try:
                         class_data = json.loads(line.strip())
@@ -1620,6 +1628,15 @@ class MainWindow(QMainWindow, WindowMixin):
                             self.class_criteria[class_name] = class_data
                     except json.JSONDecodeError as e:
                         print(f"Error parsing line: {line}. Error: {e}")
+
+    def save_updated_classes(self):
+        updated_classes_file = os.path.join(os.path.dirname(__file__), "data", "updated_classes.txt")
+        with codecs.open(updated_classes_file, 'w', 'utf-8') as f:
+            for class_name, criteria in self.class_criteria.items():
+                new_criteria = {'name': class_name}
+                new_criteria.update(criteria)
+                json.dump(new_criteria, f)
+                f.write('\n')
 
     def load_pascal_xml_by_filename(self, xml_path):
         if self.file_path is None:

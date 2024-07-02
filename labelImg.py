@@ -48,6 +48,7 @@ from libs.create_ml_io import CreateMLReader
 from libs.create_ml_io import JSON_EXT
 from libs.ustr import ustr
 from libs.hashableQListWidgetItem import HashableQListWidgetItem
+from libs.classManagerDock import ClassManagerDock
 
 __appname__ = 'labelImg'
 
@@ -207,6 +208,12 @@ class MainWindow(QMainWindow, WindowMixin):
         self.canvas.drawingPolygon.connect(self.toggle_drawing_sensitive)
 
         self.setCentralWidget(scroll)
+
+        # Add the Class Manager Dock
+        self.class_manager_dock = ClassManagerDock(classes=self.class_criteria, parent=self)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.class_manager_dock)
+        self.class_manager_dock.setFeatures(QDockWidget.DockWidgetClosable | QDockWidget.DockWidgetFloatable)
+
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.file_dock)
         self.file_dock.setFeatures(QDockWidget.DockWidgetFloatable)
@@ -1687,6 +1694,13 @@ class MainWindow(QMainWindow, WindowMixin):
                             self.class_criteria[class_name] = class_data
                     except json.JSONDecodeError as e:
                         print(f"Error parsing line: {line}. Error: {e}")
+
+    def update_class_criteria(self, updated_classes):
+        self.class_criteria = updated_classes
+        # Optionally update label_hist or any other related components if necessary
+        self.label_hist = list(self.class_criteria.keys())
+        self.default_label_combo_box.update_items(self.label_hist)
+        self.combo_box.update_items(self.label_hist)
 
     def save_updated_classes(self):
         updated_classes_file = os.path.join(os.path.dirname(__file__), "data", "updated_classes.txt")

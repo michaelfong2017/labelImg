@@ -1096,18 +1096,18 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def load_file(self, file_path=None):
         """Load the specified file, or the last opened file if None."""
+        if self.dirty:
+            self.save_current_annotations()  # Save the current annotations before loading a new file
+
         self.reset_state()
         self.canvas.setEnabled(False)
         if file_path is None:
             file_path = self.settings.get(SETTING_FILENAME)
-        # Make sure that filePath is a regular python string, rather than QString
         file_path = ustr(file_path)
 
-        # Fix bug: An  index error after select a directory when open a new file.
         unicode_file_path = ustr(file_path)
         unicode_file_path = os.path.abspath(unicode_file_path)
-        # Tzutalin 20160906 : Add file list and dock to move faster
-        # Highlight the file item
+
         if unicode_file_path and self.file_list_widget.count() > 0:
             if unicode_file_path in self.m_img_list:
                 index = self.m_img_list.index(unicode_file_path)
@@ -1123,19 +1123,16 @@ class MainWindow(QMainWindow, WindowMixin):
                     self.label_file = LabelFile(unicode_file_path)
                 except LabelFileError as e:
                     self.error_message(u'Error opening file',
-                                       (u"<p><b>%s</b></p>"
+                                    (u"<p><b>%s</b></p>"
                                         u"<p>Make sure <i>%s</i> is a valid label file.")
-                                       % (e, unicode_file_path))
+                                    % (e, unicode_file_path))
                     self.status("Error reading %s" % unicode_file_path)
-                    
                     return False
                 self.image_data = self.label_file.image_data
                 self.line_color = QColor(*self.label_file.lineColor)
                 self.fill_color = QColor(*self.label_file.fillColor)
                 self.canvas.verified = self.label_file.verified
             else:
-                # Load image:
-                # read data first and store for saving into label file.
                 self.image_data = read(unicode_file_path, None)
                 self.label_file = None
                 self.canvas.verified = False
@@ -1146,27 +1143,24 @@ class MainWindow(QMainWindow, WindowMixin):
                 image = QImage.fromData(self.image_data)
             if image.isNull():
                 self.error_message(u'Error opening file',
-                                   u"<p>Make sure <i>%s</i> is a valid image file." % unicode_file_path)
+                                u"<p>Make sure <i>%s</i> is a valid image file." % unicode_file_path)
                 self.status("Error reading %s" % unicode_file_path)
                 return False
             self.status("Loaded %s" % os.path.basename(unicode_file_path))
             self.image = image
             self.file_path = unicode_file_path
             self.canvas.load_pixmap(QPixmap.fromImage(image))
-            if self.label_file:
-                self.load_labels(self.label_file.shapes)
+            self.show_bounding_box_from_annotation_file(self.file_path)  # Load annotations for the new file
             self.set_clean()
             self.canvas.setEnabled(True)
             self.adjust_scale(initial=True)
             self.paint_canvas()
             self.add_recent_file(self.file_path)
             self.toggle_actions(True)
-            self.show_bounding_box_from_annotation_file(self.file_path)
 
             counter = self.counter_str()
             self.setWindowTitle(__appname__ + ' ' + file_path + ' ' + counter)
 
-            # Default : select last item if there is at least one item
             if self.label_list.count():
                 self.label_list.setCurrentItem(self.label_list.item(self.label_list.count() - 1))
                 self.label_list.item(self.label_list.count() - 1).setSelected(True)
@@ -1174,6 +1168,56 @@ class MainWindow(QMainWindow, WindowMixin):
             self.canvas.setFocus(True)
             return True
         return False
+
+    def save_current_annotations(self):
+        if self.file_path:
+            annotations_file = self.get_annotations_file_path(self.file_path)
+            shapes = [self.shape_to_dict(shape) for shape in self.canvas.shapes]
+            with open(annotations_file, 'w') as f:
+                json.dump(shapes, f)
+            self.set_clean()
+
+    def load_annotations_for_file(self, file_path):
+        annotations_file = self.get_annotations_file_path(file_path)
+        if os.path.exists(annotations_file):
+            with open(annotations_file, 'r') as f:
+                shapes = json.load(f)
+            current_width, current_height = self.image.width(), self.image.height()
+            scaled_shapes = [self.dict_to_shape(shape, current_width, current_height) for shape in shapes]
+            self.load_scaled_labels(scaled_shapes)
+
+    def get_annotations_file_path(self, file_path):
+        dir_path = os.path.dirname(file_path)
+        dir_name = os.path.basename(dir_path)
+        return os.path.join(dir_path, f"{dir_name}_annotations.json")
+
+    def shape_to_dict(self, shape):
+        image_width, image_height = self.image.width(), self.image.height()
+        return {
+            'label': shape.label,
+            'line_color': shape.line_color.getRgb(),
+            'fill_color': shape.fill_color.getRgb(),
+            'points': [(p.x() / image_width, p.y() / image_height) for p in shape.points],
+            'difficult': shape.difficult
+        }
+
+    def dict_to_shape(self, data, image_width, image_height):
+        shape = Shape(label=data['label'])
+        for x, y in data['points']:
+            shape.add_point(QPointF(x * image_width, y * image_height))
+        shape.line_color = QColor(*data['line_color'])
+        shape.fill_color = QColor(*data['fill_color'])
+        shape.difficult = data['difficult']
+        shape.close()
+        return shape
+
+    def load_scaled_labels(self, shapes):
+        s = []
+        for shape in shapes:
+            s.append(shape)
+            self.add_label(shape)
+        self.canvas.load_shapes(s)
+        self.update_combo_box()
 
     def counter_str(self):
         """
@@ -1189,7 +1233,7 @@ class MainWindow(QMainWindow, WindowMixin):
             json_path = os.path.join(self.default_save_dir, basename + JSON_EXT)
 
             """Annotation file priority:
-            PascalXML > YOLO
+            PascalXML > YOLO > CreateML > Scaled JSON
             """
             if os.path.isfile(xml_path):
                 self.load_pascal_xml_by_filename(xml_path)
@@ -1197,6 +1241,14 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.load_yolo_txt_by_filename(txt_path)
             elif os.path.isfile(json_path):
                 self.load_create_ml_json_by_filename(json_path, file_path)
+            else:
+                annotations_file = self.get_annotations_file_path(file_path)
+                if os.path.isfile(annotations_file):
+                    with open(annotations_file, 'r') as f:
+                        shapes = json.load(f)
+                    current_width, current_height = self.image.width(), self.image.height()
+                    scaled_shapes = [self.dict_to_shape(shape, current_width, current_height) for shape in shapes]
+                    self.load_scaled_labels(scaled_shapes)
 
         else:
             xml_path = os.path.splitext(file_path)[0] + XML_EXT
@@ -1209,7 +1261,14 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.load_yolo_txt_by_filename(txt_path)
             elif os.path.isfile(json_path):
                 self.load_create_ml_json_by_filename(json_path, file_path)
-            
+            else:
+                annotations_file = self.get_annotations_file_path(file_path)
+                if os.path.isfile(annotations_file):
+                    with open(annotations_file, 'r') as f:
+                        shapes = json.load(f)
+                    current_width, current_height = self.image.width(), self.image.height()
+                    scaled_shapes = [self.dict_to_shape(shape, current_width, current_height) for shape in shapes]
+                    self.load_scaled_labels(scaled_shapes)
 
     def resizeEvent(self, event):
         if self.canvas and not self.image.isNull()\
